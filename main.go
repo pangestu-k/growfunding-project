@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"growfunding/auth"
 	"growfunding/handler"
 	"growfunding/user"
@@ -23,6 +24,18 @@ func main() {
 	userService := user.NewService(userRepository)
 	authService := auth.NewService()
 	userHandler := handler.NewHandler(userService, authService)
+
+	token, err := authService.ValidateToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMX0.MGmCvCxgghh0tfE4sC1uMc5jm91BC9lTnVaqS7koowY")
+
+	if err != nil {
+		fmt.Println("Error")
+	}
+
+	if token.Valid {
+		fmt.Println("Token JWT valid")
+	} else {
+		fmt.Println("Token JWT invalid")
+	}
 
 	router := gin.Default()
 	api := router.Group("/api/v1")
