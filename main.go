@@ -1,6 +1,7 @@
 package main
 
 import (
+	"growfunding/auth"
 	"growfunding/handler"
 	"growfunding/user"
 	"log"
@@ -20,12 +21,15 @@ func main() {
 
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
-	userHandler := handler.NewHandler(userService)
+	authService := auth.NewService()
+	userHandler := handler.NewHandler(userService, authService)
 
 	router := gin.Default()
 	api := router.Group("/api/v1")
 
 	api.POST("/register", userHandler.RegisterUser)
 	api.POST("/login", userHandler.LoginUser)
+	api.POST("/email-checker", userHandler.CheckEmailAvability)
+	api.POST("/avatars", userHandler.UploadAvatar)
 	router.Run(":4000")
 }
