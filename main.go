@@ -31,19 +31,19 @@ func main() {
 	campaignService := campaign.NewService(campaignRepostitory)
 
 	userHandler := handler.NewHandler(userService, authService)
+	campaignHandler := handler.NewCampaignHandler(campaignService)
 
 	router := gin.Default()
 	api := router.Group("/api/v1")
 
+	// user
 	api.POST("/register", userHandler.RegisterUser)
 	api.POST("/login", userHandler.LoginUser)
 	api.POST("/email-checker", userHandler.CheckEmailAvability)
 	api.POST("/avatars", authMiddleware(authService, userService), userHandler.UploadAvatar)
-	api.GET("/testing", func(c *gin.Context) {
 
-		campaigns, _ := campaignService.FindCampaigns(1)
-		c.JSON(200, campaigns)
-	})
+	// campaign
+	api.GET("/campaigns", campaignHandler.GetCampaigns)
 
 	router.Run(":4000")
 }
