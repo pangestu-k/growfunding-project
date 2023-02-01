@@ -157,7 +157,9 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 
 	extFile := filepath.Ext(file.Filename)
 	fileName := rand.Int()
-	idUser := 1
+
+	currentUser := c.MustGet("currentUser").(user.User)
+	idUser := currentUser.ID
 
 	path := fmt.Sprintf("images/%d-user-%d%s", idUser, fileName, extFile)
 
@@ -171,7 +173,7 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	_, err = h.userService.UploadAvatar(1, path)
+	_, err = h.userService.UploadAvatar(idUser, path)
 	if err != nil {
 		data := gin.H{
 			"upload-file": false,

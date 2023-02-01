@@ -1,13 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"growfunding/auth"
 	"growfunding/handler"
+	"growfunding/helper"
 	"growfunding/user"
 	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -25,24 +27,66 @@ func main() {
 	authService := auth.NewService()
 	userHandler := handler.NewHandler(userService, authService)
 
-	token, err := authService.ValidateToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMX0.MGmCvCxgghh0tfE4sC1uMc5jm91BC9lTnVaqS7koowY")
-
-	if err != nil {
-		fmt.Println("Error")
-	}
-
-	if token.Valid {
-		fmt.Println("Token JWT valid")
-	} else {
-		fmt.Println("Token JWT invalid")
-	}
-
 	router := gin.Default()
 	api := router.Group("/api/v1")
 
 	api.POST("/register", userHandler.RegisterUser)
 	api.POST("/login", userHandler.LoginUser)
 	api.POST("/email-checker", userHandler.CheckEmailAvability)
-	api.POST("/avatars", userHandler.UploadAvatar)
+	api.POST("/avatars", authMiddleware(authService, userService), userHandler.UploadAvatar)
 	router.Run(":4000")
 }
+
+func authMiddleware(authService auth.Service, userService user.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+
+		if !strings.Contains(authHeader, "Bearer") {
+			response := helper.APIResponse("Unauthorized", 401, "error", nil)
+			c.AbortWithStatusJSON(401, response)
+			return
+		}
+
+		// ambil hanya nilai token
+		tokenString := ""
+		arrayToken := strings.Split(authHeader, " ")
+		if len(arrayToken) == 2 {
+			tokenString = arrayToken[1]
+		}
+
+		token, err := authService.ValidateToken(tokenString)
+
+		if err != nil {
+			response := helper.APIResponse("Unauthorized", 401, "error", nil)
+			c.AbortWithStatusJSON(401, response)
+			return
+		}
+
+		claim, ok := token.Claims.(jwt.MapClaims)
+
+		if !ok || !token.Valid {
+			response := helper.APIResponse("Unauthorized", 401, "error", nil)
+			c.AbortWithStatusJSON(401, response)
+			return
+		}
+
+		userID := int(claim["user_id"].(float64))
+
+		user, err := userService.GetUserByID(userID)
+
+		if err != nil {
+			response := helper.APIResponse("Unauthorized", 401, "error", nil)
+			c.AbortWithStatusJSON(401, response)
+			return
+		}
+
+		c.Set("currentUser", user)
+	}
+}
+
+// ambil nilai header authorization : Bearer Genrate-Token
+// dari header authorization, kita ambil nilai nya saja / di split
+// sesudah mendapatkan nilai token kita validasi token tersebut
+// ambil user_id
+// ambil user dari db berdasarkan user_id yg didapatkan dari token lewat service
+// kita set context isinya user tadi
