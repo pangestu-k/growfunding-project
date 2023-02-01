@@ -2,6 +2,7 @@ package main
 
 import (
 	"growfunding/auth"
+	"growfunding/campaign"
 	"growfunding/handler"
 	"growfunding/helper"
 	"growfunding/user"
@@ -23,8 +24,12 @@ func main() {
 	}
 
 	userRepository := user.NewRepository(db)
+	campaignRepostitory := campaign.NewRepository(db)
+
 	userService := user.NewService(userRepository)
 	authService := auth.NewService()
+	campaignService := campaign.NewService(campaignRepostitory)
+
 	userHandler := handler.NewHandler(userService, authService)
 
 	router := gin.Default()
@@ -34,9 +39,16 @@ func main() {
 	api.POST("/login", userHandler.LoginUser)
 	api.POST("/email-checker", userHandler.CheckEmailAvability)
 	api.POST("/avatars", authMiddleware(authService, userService), userHandler.UploadAvatar)
+	api.GET("/testing", func(c *gin.Context) {
+
+		campaigns, _ := campaignService.FindCampaigns(1)
+		c.JSON(200, campaigns)
+	})
+
 	router.Run(":4000")
 }
 
+// middleware auth
 func authMiddleware(authService auth.Service, userService user.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
