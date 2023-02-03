@@ -30,6 +30,20 @@ func main() {
 	authService := auth.NewService()
 	campaignService := campaign.NewService(campaignRepostitory)
 
+	campaignInput := campaign.CreateCampaignInput{
+		Name:             "Rizky pangestu update",
+		ShortDescription: "short desc update",
+		Description:      "desc update",
+		GoalAmount:       20000000,
+		Perks:            "perks 1 update, perks 2",
+	}
+
+	campaignIDInput := campaign.GetCampaignDetailInput{
+		ID: 8,
+	}
+
+	campaignService.UpdataeCampaign(campaignIDInput, campaignInput)
+
 	userHandler := handler.NewHandler(userService, authService)
 	campaignHandler := handler.NewCampaignHandler(campaignService)
 
@@ -48,6 +62,8 @@ func main() {
 	// campaign
 	api.GET("/campaigns", campaignHandler.GetCampaigns)
 	api.GET("/campaigns/:id", campaignHandler.GetCampaign)
+	api.POST("/campaigns", authMiddleware(authService, userService), campaignHandler.CreateCampaign)
+	api.PUT("/campaigns/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
 
 	router.Run(":4000")
 }
@@ -99,10 +115,3 @@ func authMiddleware(authService auth.Service, userService user.Service) gin.Hand
 		c.Set("currentUser", user)
 	}
 }
-
-// ambil nilai header authorization : Bearer Genrate-Token
-// dari header authorization, kita ambil nilai nya saja / di split
-// sesudah mendapatkan nilai token kita validasi token tersebut
-// ambil user_id
-// ambil user dari db berdasarkan user_id yg didapatkan dari token lewat service
-// kita set context isinya user tadi

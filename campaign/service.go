@@ -1,8 +1,17 @@
 package campaign
 
+import (
+	"errors"
+	"fmt"
+
+	"github.com/gosimple/slug"
+)
+
 type Service interface {
 	GetCampaigns(userID int) ([]Campaign, error)
 	GetCampaign(input GetCampaignDetailInput) (Campaign, error)
+	CreateCampaign(input CreateCampaignInput) (Campaign, error)
+	UpdataeCampaign(inputID GetCampaignDetailInput, inputData CreateCampaignInput) (Campaign, error)
 }
 
 type service struct {
@@ -40,4 +49,54 @@ func (s *service) GetCampaign(input GetCampaignDetailInput) (Campaign, error) {
 	}
 
 	return campaign, nil
+}
+
+func (s *service) CreateCampaign(input CreateCampaignInput) (Campaign, error) {
+	campaign := Campaign{}
+	campaign.Name = input.Name
+	campaign.ShortDescription = input.ShortDescription
+	campaign.Description = input.Description
+	campaign.Perks = input.Perks
+	campaign.UserID = input.User.ID
+
+	// membuat slug
+	slugString := fmt.Sprintf("%s %d", input.Name, input.User.ID)
+	campaign.Slug = slug.Make(slugString)
+
+	newCamapaign, err := s.repository.Save(campaign)
+
+	if err != nil {
+		return newCamapaign, err
+	}
+
+	return newCamapaign, nil
+}
+
+func (s *service) UpdataeCampaign(inputID GetCampaignDetailInput, inputData CreateCampaignInput) (Campaign, error) {
+	campaign, err := s.repository.FindByID(inputID.ID)
+
+	if err != nil {
+		return campaign, err
+	}
+
+	if campaign.ID == 0 {
+		return campaign, errors.New("Campaign dengan id tersebut tidak ditemukan")
+	}
+
+	if campaign.UserID != inputData.User.ID {
+		return campaign, errors.New("your not an owoner fo this campaign")
+	}
+
+	campaign.Name = inputData.Name
+	campaign.ShortDescription = inputData.ShortDescription
+	campaign.Description = inputData.Description
+	campaign.GoalAmount = inputData.GoalAmount
+	campaign.Perks = inputData.Perks
+
+	updateCampaign, err := s.repository.Update(campaign)
+	if err != nil {
+		return campaign, err
+	}
+
+	return updateCampaign, nil
 }
