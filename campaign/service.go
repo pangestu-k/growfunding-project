@@ -12,6 +12,7 @@ type Service interface {
 	GetCampaign(input GetCampaignDetailInput) (Campaign, error)
 	CreateCampaign(input CreateCampaignInput) (Campaign, error)
 	UpdataeCampaign(inputID GetCampaignDetailInput, inputData CreateCampaignInput) (Campaign, error)
+	SaveCampaignImage(campaignImageInput CreateCampaignImageInput, fileLocation string) (CampaignImage, error)
 }
 
 type service struct {
@@ -99,4 +100,42 @@ func (s *service) UpdataeCampaign(inputID GetCampaignDetailInput, inputData Crea
 	}
 
 	return updateCampaign, nil
+}
+
+func (s *service) SaveCampaignImage(campaignImageInput CreateCampaignImageInput, fileLocation string) (CampaignImage, error) {
+	campaign, err := s.repository.FindByID(campaignImageInput.CampaignID)
+
+	if err != nil {
+		return CampaignImage{}, errors.New("data campaign not Found")
+	}
+
+	if campaign.UserID != campaignImageInput.User.ID {
+		return CampaignImage{}, errors.New("your not an owoner fo this campaign")
+	}
+
+	is_primary := 0
+	fmt.Println(campaignImageInput.IsPrimary, "<- nilai nya")
+	if campaignImageInput.IsPrimary {
+		fmt.Println("kesini yak")
+		is_primary = 1
+		_, err := s.repository.MarkAllImagesAsNonPrimary(campaignImageInput.CampaignID)
+
+		if err != nil {
+			return CampaignImage{}, err
+		}
+	} else {
+		fmt.Println("gak kesini")
+	}
+
+	campaignImage := CampaignImage{}
+	campaignImage.CampaignID = campaignImageInput.CampaignID
+	campaignImage.FileName = fileLocation
+	campaignImage.IsPrimary = is_primary
+
+	newCampaign, err := s.repository.CreateImage(campaignImage)
+	if err != nil {
+		return newCampaign, err
+	}
+
+	return newCampaign, nil
 }
