@@ -5,6 +5,7 @@ import (
 	"growfunding/campaign"
 	"growfunding/handler"
 	"growfunding/helper"
+	"growfunding/transaction"
 	"growfunding/user"
 	"log"
 	"strings"
@@ -23,29 +24,21 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
+	// init repo
 	userRepository := user.NewRepository(db)
 	campaignRepostitory := campaign.NewRepository(db)
+	transactionRepository := transaction.NewRepository(db)
 
+	// ini service
 	userService := user.NewService(userRepository)
 	authService := auth.NewService()
 	campaignService := campaign.NewService(campaignRepostitory)
+	transactionService := transaction.NewService(transactionRepository, campaignRepostitory)
 
-	campaignInput := campaign.CreateCampaignInput{
-		Name:             "Rizky pangestu update",
-		ShortDescription: "short desc update",
-		Description:      "desc update",
-		GoalAmount:       20000000,
-		Perks:            "perks 1 update, perks 2",
-	}
-
-	campaignIDInput := campaign.GetCampaignDetailInput{
-		ID: 8,
-	}
-
-	campaignService.UpdataeCampaign(campaignIDInput, campaignInput)
-
+	// init handler
 	userHandler := handler.NewHandler(userService, authService)
 	campaignHandler := handler.NewCampaignHandler(campaignService)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	router := gin.Default()
 	router.Static("images/user", "./images/user")
@@ -67,6 +60,9 @@ func main() {
 
 	// campaign images
 	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.SaveCampaignImage)
+
+	// transaction
+	api.GET("campaign/:id/transaction", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
 
 	router.Run(":4000")
 }
